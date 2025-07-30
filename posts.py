@@ -37,7 +37,8 @@ def select_hss_size(P_total, L, beam_load, beam_width, F_y=46, phi_c=0.9):
         M_u = beam_load * e
         phi_Mn = phi_c * F_y * S
         interaction = (P_total / phi_Pn) + (M_u / phi_Mn)
-        if interaction <= 1.0:
+        # Add safety margin: interaction <= 0.9
+        if interaction <= 0.9:
             return hss, A, S, B_hss
     return None, None, None, None
 
@@ -66,7 +67,7 @@ def calculate_plates(P_beam, P_upper, B_hss, beam_width, beam_height, beam_offse
         A_bearing = P_s * 1000 / lvl_bearing
         N = A_bearing / beam_width
         N = max(N, B_hss)
-        N = ceil(N * 4) / 4
+        N = ceil(N * 4) / 4  # Round up to ensure bearing stress <= 500 psi
         
         # Cap plate width
         B = max(B_hss + 2, beam_width + 2)
@@ -83,7 +84,7 @@ def calculate_plates(P_beam, P_upper, B_hss, beam_width, beam_height, beam_offse
         if denominator == 0:
             raise ValueError("Invalid plate dimensions.")
         t_cap = l * ((2 * (P_beam + P_upper)) / denominator) ** 0.5
-        t_cap = round(t_cap * 8) / 8
+        t_cap = max(round(t_cap * 8) / 8, 0.375)  # Minimum 3/8" thickness
         if t_cap < l * ((2 * (P_beam + P_upper)) / denominator) ** 0.5:
             t_cap += 0.125
         
@@ -162,12 +163,12 @@ def process_column_stack(cases, lvl_bearing=500):
 if __name__ == "__main__":
     # Input: (post_length, beam_load, beam_width, beam_height)
     cases = [
-        (120, 56, 3, 12),  # Level 1: Your original case
-        (96, 40, 3.5, 14),  # Level 2
-        (144, 20, 2.5, 10),  # Level 3: Replaces 20-kip upper load
-        (14, .1, 2.5, 10)  # Level 3: Replaces 20-kip upper load
+        (120, 56, 3, 12),    # Level 1
+        (96, 40, 3.5, 14),   # Level 2
+        (144, 20, 2.5, 10),  # Level 3
+        (144, 0.1, 2.5, 10)  # Level 4
     ]
-
+    
     results = process_column_stack(cases)
     for result in results:
         print(result)
